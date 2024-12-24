@@ -5,6 +5,7 @@ from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
+import threading
 
 def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
     """
@@ -246,9 +247,28 @@ def main() -> None:
     .filter("crime_id_pk IS NOT NULL") \
     .drop("crime_id_pk", "crime_desc")
 
-    for key in df_dict.keys():
-        insert_data(df_dict[key], DB_URL, key, PROPERTIES)
-        print(f"{key} data inserted into database")
+    insert_weapons = threading.Thread(target=insert_data, args=(df_dict["weapon"], DB_URL, "weapon", PROPERTIES))
+    insert_weapons.start()
+    insert_area = threading.Thread(target=insert_data, args=(df_dict["area"], DB_URL, "area", PROPERTIES))
+    insert_area.start()
+    insert_status = threading.Thread(target=insert_data, args=(df_dict["status"], DB_URL, "status", PROPERTIES))
+    insert_status.start()
+    insert_premisis = threading.Thread(target=insert_data, args=(df_dict["premisis"], DB_URL, "premisis", PROPERTIES))
+    insert_premisis.start()
+    insert_crime = threading.Thread(target=insert_data, args=(df_dict["crime"], DB_URL, "crime", PROPERTIES))
+    insert_crime.start()
+    insert_location = threading.Thread(target=insert_data, args=(df_dict["location"], DB_URL, "location", PROPERTIES))
+    insert_location.start()
+
+    insert_weapons.join()
+    insert_area.join()
+    insert_status.join()
+    insert_premisis.join()
+    insert_crime.join()
+    insert_location.join()
+
+    insert_data(df_dict["report"], DB_URL, "report", PROPERTIES)
+    insert_data(df_dict["crime_report"], DB_URL, "crime_report", PROPERTIES)
 
     spark.stop()
 
