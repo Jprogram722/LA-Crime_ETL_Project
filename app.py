@@ -10,7 +10,7 @@ def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
     """
     This function will insert data into the corrisponding table
     """
-    df.repartition(4) \
+    df.repartition(8) \
     .write \
     .mode("append") \
     .format("jdbc") \
@@ -137,82 +137,62 @@ def main() -> None:
     # add ranks to each value in location_name column which will be there primary key
     df = df.withColumn("location_id_pk", sf.rank().over(w))
 
+    print("Clensing is done")
+
     ############################ PART 3 insert data into tables ##############################
+
+    df_dict = {}
 
     # weapon data
 
-    df_weapons = prepare_dataframe(df, 
+    df_dict["weapon"] = prepare_dataframe(df, 
         old_id="Weapon Used Cd",
         old_val="Weapon Desc",
         new_id="weapon_id_pk",
         new_val="weapon")
-    
-    insert_data(df_weapons, DB_URL, "weapon", PROPERTIES)
-
-    print("Weapons has been inserted into database")
 
     # area data
 
-    df_area = prepare_dataframe(df, 
+    df_dict["area"] = prepare_dataframe(df, 
         old_id="AREA",
         old_val="AREA NAME",
         new_id="area_id_pk",
         new_val="area_name")
-    
-    insert_data(df_area, DB_URL, "area", PROPERTIES)
-
-    print("Area data has been inserted into database")
 
     # status data
 
-    df_status = prepare_dataframe(df, 
+    df_dict["status"] = prepare_dataframe(df, 
         old_id="Status",
         old_val="Status Desc",
         new_id="status_code",
         new_val="status_desc")
-    
-    insert_data(df_status, DB_URL, "status", PROPERTIES)
-
-    print("Status has been inserted into database")
 
     # Premisis Data
 
-    df_premisis = prepare_dataframe(df, 
+    df_dict["premisis"] = prepare_dataframe(df, 
         old_id="Premis Cd",
         old_val="Premis Desc",
         new_id="premisis_id_pk",
         new_val="premisis_desc")
-    
-    insert_data(df_premisis, DB_URL, "premisis", PROPERTIES)
-
-    print("Premisis has been inserted into database")
 
     # Crime Data
 
-    df_crime = prepare_dataframe(df, 
+    df_dict["crime"] = prepare_dataframe(df, 
         old_id="Crm Cd",
         old_val="Crm Cd Desc",
         new_id="crime_id_pk",
         new_val="crime_desc")
-    
-    insert_data(df_crime, DB_URL, "crime", PROPERTIES)
-
-    print("Crime has been inserted into database")
 
     # Location Data
 
-    df_location = prepare_dataframe(df, 
+    df_dict["location"] = prepare_dataframe(df, 
         id="location_id_pk",
         val="location_name"
         )
-    
-    insert_data(df_location, DB_URL, "location", PROPERTIES)
-
-    print("locations has been inserted into database")
 
     # Report Data
 
-    df_report = df.select(
+    df_dict["report"] = df.select(
         sf.col("DR_NO").alias("report_id_pk"),
         sf.to_date("Date Rptd", "MM/dd/yyyy").alias("date_reported"),
         sf.to_timestamp("DATE AND TIME OCC", "MM/dd/yyyy HH:mm:ss").alias("date_occured"),
@@ -230,13 +210,9 @@ def main() -> None:
     .filter(df["DR_NO"].isNotNull()) \
     .dropDuplicates(subset=["report_id_pk"])
 
-    insert_data(df_report, DB_URL, "report", PROPERTIES)
-
-    print("Report Data Inserted")
-
     # Crime Report Bridge Table Data
 
-    df_crime_report = df.dropDuplicates(subset=["DR_NO"]) \
+    df_dict["crime_report"] = df.dropDuplicates(subset=["DR_NO"]) \
     .withColumn('crime_id_fk', sf.explode(sf.array("Crm Cd 1", "Crm Cd 2", "Crm Cd 3", "Crm Cd 4"))) \
     .select(
         sf.col("DR_NO").alias("report_id_fk"),
@@ -244,13 +220,15 @@ def main() -> None:
     ) \
     .na.drop(subset=["crime_id_fk"])
 
-    df_crime_report = df_crime_report.join(df_crime, df_crime_report["crime_id_fk"] == df_crime["crime_id_pk"], "left") \
+    df_dict["crime_report"] = df_dict["crime_report"].join(
+        df_dict["crime"], df_dict["crime_report"]["crime_id_fk"] == df_dict["crime"]["crime_id_pk"], "left"
+    ) \
     .filter("crime_id_pk IS NOT NULL") \
     .drop("crime_id_pk", "crime_desc")
 
-    insert_data(df_crime_report, DB_URL, "crime_report", PROPERTIES)
-
-    print("Crime And Reports are now connected")
+    for key in df_dict.keys():
+        insert_data(df_dict[key], DB_URL, key, PROPERTIES)
+        print(f"{key} data inserted into database")
 
     spark.stop()
 
