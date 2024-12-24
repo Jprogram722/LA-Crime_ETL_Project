@@ -21,7 +21,27 @@ def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
     .option("driver", properties["driver"]) \
     .save()
 
+
+def get_db_data(spark: SparkSession, url: str, table: str, properties: dict[str]):
+    """
+    This function will read data from a table in the database
+    """
+    df = spark.read \
+    .format("jdbc") \
+    .option("url", url) \
+    .option("dbtable", table) \
+    .option("user", properties["user"]) \
+    .option("password", properties["password"]) \
+    .option("driver", properties["driver"]) \
+    .load()
+
+    return df
+    
+
 def prepare_dataframe(df, **cols):
+    """
+    This function will return a new dataframe that will be in the same format as the sql table
+    """
     if "new_id" in cols.keys():
         df_mod = df.select(
             sf.col(cols["old_id"]).alias(cols["new_id"]),
