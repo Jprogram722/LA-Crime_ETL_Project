@@ -22,6 +22,8 @@ def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
     .option("driver", properties["driver"]) \
     .save()
 
+    print(f"{table} data has been inserted into database")
+
 
 def get_db_data(spark: SparkSession, url: str, table: str, properties: dict[str]):
     """
@@ -129,17 +131,17 @@ def main() -> None:
         sf.col("TIME OCC").cast("string")
     ).na.fill(value="1970-01-01 00:00:00", subset="TIME OCC") \
     .withColumn(
-        "Date Rptd",
+        "date_reported",
         sf.substring("Date Rptd", 0, 10)
     ) \
     .withColumn(
-        "DATE AND TIME OCC",
+        "date_occured",
         sf.concat(
             sf.substring("DATE OCC", 0, 10),
             sf.substring("TIME OCC", 11, 9)
         )
     ) \
-    .drop("DATE OCC", "TIME OCC") \
+    .drop("DATE OCC", "TIME OCC", "Date Rptd") \
     .na.fill(value="X", subset="Vict Sex").na.fill(value="X", subset="Vict Descent") \
     .withColumn(
         "location_name",
@@ -215,8 +217,8 @@ def main() -> None:
 
     df_dict["report"] = df.select(
         sf.col("DR_NO").alias("report_id_pk"),
-        sf.to_date("Date Rptd", "MM/dd/yyyy").alias("date_reported"),
-        sf.to_timestamp("DATE AND TIME OCC", "MM/dd/yyyy HH:mm:ss").alias("date_occured"),
+        sf.to_date("date_reported", "MM/dd/yyyy").alias("date_reported"),
+        sf.to_timestamp("date_occured", "MM/dd/yyyy HH:mm:ss").alias("date_occured"),
         sf.col("Vict Age").alias("victim_age"),
         sf.col("Vict Sex").alias("victim_sex"),
         sf.col("Vict Descent").alias("victim_decent"),
@@ -247,25 +249,18 @@ def main() -> None:
     .filter("crime_id_pk IS NOT NULL") \
     .drop("crime_id_pk", "crime_desc")
 
-    insert_weapons = threading.Thread(target=insert_data, args=(df_dict["weapon"], DB_URL, "weapon", PROPERTIES))
-    insert_weapons.start()
-    insert_area = threading.Thread(target=insert_data, args=(df_dict["area"], DB_URL, "area", PROPERTIES))
-    insert_area.start()
-    insert_status = threading.Thread(target=insert_data, args=(df_dict["status"], DB_URL, "status", PROPERTIES))
-    insert_status.start()
-    insert_premisis = threading.Thread(target=insert_data, args=(df_dict["premisis"], DB_URL, "premisis", PROPERTIES))
-    insert_premisis.start()
-    insert_crime = threading.Thread(target=insert_data, args=(df_dict["crime"], DB_URL, "crime", PROPERTIES))
-    insert_crime.start()
-    insert_location = threading.Thread(target=insert_data, args=(df_dict["location"], DB_URL, "location", PROPERTIES))
-    insert_location.start()
+    tables = ["weapon", "area", "status", "premisis", "crime", "location"]
+    
+    threads = [
+        threading.Thread(target=insert_data, args=(df_dict[table], DB_URL, table, PROPERTIES))
+        for table in tables
+    ]
 
-    insert_weapons.join()
-    insert_area.join()
-    insert_status.join()
-    insert_premisis.join()
-    insert_crime.join()
-    insert_location.join()
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 
     insert_data(df_dict["report"], DB_URL, "report", PROPERTIES)
     insert_data(df_dict["crime_report"], DB_URL, "crime_report", PROPERTIES)
