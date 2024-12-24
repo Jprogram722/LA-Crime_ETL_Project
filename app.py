@@ -6,40 +6,8 @@ from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
 import threading
-
-def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
-    """
-    This function will insert data into the corrisponding table
-    """
-    df.repartition(8) \
-    .write \
-    .mode("append") \
-    .format("jdbc") \
-    .option("url", url) \
-    .option("dbtable", table) \
-    .option("user", properties["user"]) \
-    .option("password", properties["password"]) \
-    .option("driver", properties["driver"]) \
-    .save()
-
-    print(f"{table} data has been inserted into database")
-
-
-def get_db_data(spark: SparkSession, url: str, table: str, properties: dict[str]):
-    """
-    This function will read data from a table in the database
-    """
-    df = spark.read \
-    .format("jdbc") \
-    .option("url", url) \
-    .option("dbtable", table) \
-    .option("user", properties["user"]) \
-    .option("password", properties["password"]) \
-    .option("driver", properties["driver"]) \
-    .load()
-
-    return df
-    
+from python_postgres.postgresConnect import truncated_tables
+from pyspark_db import insert_data
 
 def prepare_dataframe(df, **cols):
     """
@@ -68,6 +36,7 @@ def main() -> None:
 
     start_time = time.time()
 
+    # load in data from .env file
     load_dotenv()
 
     PROPERTIES = {
@@ -83,7 +52,7 @@ def main() -> None:
     WEB_URL = "https://data.lacity.org/api/views/2nrs-mtv8/rows.csv?accessType=DOWNLOAD"
 
 
-    ################## PART 1: download the data ####################
+    ################## PART 1: download the data and truncate database ####################
 
     if not os.path.isdir(folder):
         os.mkdir(folder)
@@ -97,6 +66,9 @@ def main() -> None:
         request.urlretrieve(WEB_URL, f"./{folder}/{file_name}")
     else:
         print("File already exists")
+
+    # delete everything in the database
+    truncated_tables()
 
     ################## PART 2: Cleanse the data with pyspark ####################
 
