@@ -88,15 +88,11 @@ def main() -> None:
     ) \
     .withColumn(
         "TIME OCC", 
-        sf.concat(
+        sf.to_timestamp(sf.concat(
             sf.substring("TIME OCC", 0, 2),
             sf.lit(":"),
             sf.substring("TIME OCC", 3, 2),
-        ),
-    ) \
-    .withColumn(
-    "TIME OCC",
-    sf.to_timestamp("TIME OCC", "HH:mm")
+        ), "HH:mm"),
     ) \
     .withColumn(
         "TIME OCC",
@@ -104,17 +100,15 @@ def main() -> None:
     ).na.fill(value="1970-01-01 00:00:00", subset="TIME OCC") \
     .withColumn(
         "date_reported",
-        sf.substring("Date Rptd", 0, 10)
+        sf.to_date(sf.substring("Date Rptd", 0, 10), "MM/dd/yyyy")
     ) \
     .withColumn(
         "date_occured",
-        sf.concat(
+        sf.to_timestamp(sf.concat(
             sf.substring("DATE OCC", 0, 10),
             sf.substring("TIME OCC", 11, 9)
-        )
+        ), "MM/dd/yyyy HH:mm:ss")
     ) \
-    .drop("DATE OCC", "TIME OCC", "Date Rptd") \
-    .na.fill(value="X", subset="Vict Sex").na.fill(value="X", subset="Vict Descent") \
     .withColumn(
         "location_name",
         sf.regexp_replace(
@@ -123,8 +117,8 @@ def main() -> None:
             "PL"
         ),
     ) \
-    .orderBy(sf.asc("location_name")) \
-    .drop("LOCATION")
+    .na.fill(value="X", subset="Vict Sex").na.fill(value="X", subset="Vict Descent") \
+    .drop("DATE OCC", "TIME OCC", "Date Rptd", "LOCATION") \
 
     # need to give rank
     # source: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.rank.html
@@ -189,8 +183,8 @@ def main() -> None:
 
     df_dict["report"] = df.select(
         sf.col("DR_NO").alias("report_id_pk"),
-        sf.to_date("date_reported", "MM/dd/yyyy").alias("date_reported"),
-        sf.to_timestamp("date_occured", "MM/dd/yyyy HH:mm:ss").alias("date_occured"),
+        sf.col("date_reported"),
+        sf.col("date_occured"),
         sf.col("Vict Age").alias("victim_age"),
         sf.col("Vict Sex").alias("victim_sex"),
         sf.col("Vict Descent").alias("victim_decent"),
