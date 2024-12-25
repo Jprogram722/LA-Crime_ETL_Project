@@ -58,6 +58,23 @@ def merge():
     cursor.close()
     conn.close()
 
+def drop_tmp_tables(tables: list[str]):
+    conn, cursor = connect()
+
+    # excute the stored procedure
+    for table in tables:
+        cursor.execute(f"DROP TABLE {table}_tmp")
+
+    try:
+        conn.commit()
+        print("Tables has been deleted")
+    except:
+        print("Something went wrong")
+        conn.rollback()
+
+    cursor.close()
+    conn.close()
+
 if __name__ == "__main__":
     ...
 
