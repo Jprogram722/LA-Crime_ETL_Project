@@ -7,12 +7,12 @@ def insert_data(df, url: str, table: str, properties: dict[str]) -> None:
     """
     This function will insert data into the corrisponding table
     """
-    df.repartition(8) \
+    df.repartition(6) \
     .write \
-    .mode("append") \
+    .mode("overwrite") \
     .format("jdbc") \
     .option("url", url) \
-    .option("dbtable", table) \
+    .option("dbtable", table+"_tmp") \
     .option("user", properties["user"]) \
     .option("password", properties["password"]) \
     .option("driver", properties["driver"]) \

@@ -6,8 +6,8 @@ from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
 import threading
-from python_postgres.postgresConnect import truncated_tables
-from pyspark_db import insert_data
+from python_postgres.postgresConnect import truncated_tables, merge
+from pyspark_db import insert_data, get_db_data
 
 def prepare_dataframe(df, **cols):
     """
@@ -68,7 +68,7 @@ def main() -> None:
         print("File already exists")
 
     # delete everything in the database
-    truncated_tables()
+    # truncated_tables()
 
     ################## PART 2: Cleanse the data with pyspark ####################
 
@@ -83,10 +83,6 @@ def main() -> None:
     df = spark.read.csv("./data/LACrimeData.csv", header=True, inferSchema=True)
 
     df = df.withColumn(
-        "TIME OCC", 
-        sf.col("TIME OCC").cast("string")
-    ) \
-    .withColumn(
         "TIME OCC", 
         sf.to_timestamp(sf.concat(
             sf.substring("TIME OCC", 0, 2),
@@ -131,6 +127,7 @@ def main() -> None:
     ############################ PART 3 insert data into tables ##############################
 
     df_dict = {}
+    # db_dict = {}
 
     # weapon data
 
@@ -139,6 +136,12 @@ def main() -> None:
         old_val="Weapon Desc",
         new_id="weapon_id_pk",
         new_val="weapon")
+
+    # db_dict["weapon"] = get_db_data(spark, DB_URL, "weapon", PROPERTIES)
+
+    # df_dict["weapon"] = df_dict["weapon"].join(
+    #     db_dict["weapon"], df_dict["weapon"].weapon == db_dict["weapon"].weapon, "leftanti"
+    # )
 
     # area data
 
@@ -214,8 +217,8 @@ def main() -> None:
     ) \
     .filter("crime_id_pk IS NOT NULL") \
     .drop("crime_id_pk", "crime_desc")
-
-    tables = ["weapon", "area", "status", "premisis", "crime", "location"]
+    
+    tables = ["weapon", "area", "status", "premisis", "crime", "location", "report", "crime_report"]
     
     threads = [
         threading.Thread(target=insert_data, args=(df_dict[table], DB_URL, table, PROPERTIES))
@@ -228,8 +231,8 @@ def main() -> None:
     for thread in threads:
         thread.join()
 
-    insert_data(df_dict["report"], DB_URL, "report", PROPERTIES)
-    insert_data(df_dict["crime_report"], DB_URL, "crime_report", PROPERTIES)
+    # merge the data
+    merge()
 
     spark.stop()
 

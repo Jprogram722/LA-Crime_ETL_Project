@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS crime(
 );
 
 CREATE TABLE IF NOT EXISTS crime_report(
-	crime_report_id_pk SERIAL PRIMARY KEY,
 	report_id_fk INT REFERENCES report (report_id_pk) ON DELETE CASCADE ON UPDATE CASCADE,
-	crime_id_fk INT REFERENCES crime (crime_id_pk) ON DELETE CASCADE ON UPDATE CASCADE
+	crime_id_fk INT REFERENCES crime (crime_id_pk) ON DELETE CASCADE ON UPDATE CASCADE,
+	PRIMARY KEY(report_id_fk, crime_id_fk)
 );
