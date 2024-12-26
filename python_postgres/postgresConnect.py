@@ -21,6 +21,23 @@ def connect():
 
     return conn, cursor
 
+def create_tables() -> None:
+    conn, cursor = connect()
+
+    with open("LACrime_db.sql", "r") as file:
+        contents = file.read()
+        commands = contents.split(";")
+        for command in commands:
+            try:
+                cursor.execute(command)
+                conn.commit()
+            except:
+                conn.rollback()
+                print("Somthing went wrong:", command)
+
+    cursor.close()
+    conn.close()
+
 def truncated_tables() -> None:
 
     tables = ["weapon", "area", "location", "status", "premisis", "crime", "report", "crime_report"]

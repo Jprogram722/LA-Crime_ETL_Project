@@ -6,7 +6,7 @@ from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
 import threading
-from python_postgres.postgresConnect import merge, drop_tmp_tables
+from python_postgres.postgresConnect import merge, drop_tmp_tables, create_tables
 from pyspark_db import insert_data
 
 def prepare_dataframe(df, **cols):
@@ -54,6 +54,9 @@ def main() -> None:
 
     ################## PART 1: download the data and truncate database ####################
 
+    # create all the tables
+    create_tables()
+
     if not os.path.isdir(folder):
         os.mkdir(folder)
         print(f"{folder} has been created")
@@ -61,11 +64,8 @@ def main() -> None:
         print(f"{folder} already exists")
 
     # download the data
-    if not os.path.isfile(f"./{folder}/{file_name}"):
-        print("Saving file.")
-        request.urlretrieve(WEB_URL, f"./{folder}/{file_name}")
-    else:
-        print("File already exists")
+    print("Downloading Data")
+    request.urlretrieve(WEB_URL, f"./{folder}/{file_name}")
 
     # delete everything in the database
     # truncated_tables()
@@ -78,6 +78,7 @@ def main() -> None:
     # this is needed to print the timestamps in the dataframe in pyspark
     conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
     
+    print("Starting Spark")
     spark = SparkSession.builder.appName("Data Wrangling").config(conf=conf).getOrCreate()
 
     df = spark.read.csv("./data/LACrimeData.csv", header=True, inferSchema=True)
