@@ -45,7 +45,7 @@ def main() -> None:
         "driver": "org.postgresql.Driver"
     }
 
-    DB_URL = os.getenv('URL')
+    DB_URL = f"jdbc:postgresql://{os.getenv('HOST')}:{os.getenv('PORT')}/{os.getenv('DB')}"
 
     folder = "data"
     file_name = "LACrimeData.csv"
@@ -128,7 +128,7 @@ def main() -> None:
     ############################ PART 3 insert data into tables ##############################
 
     df_dict = {}
-    # db_dict = {}
+    db_dict = {}
 
     # weapon data
 
@@ -137,12 +137,6 @@ def main() -> None:
         old_val="Weapon Desc",
         new_id="weapon_id_pk",
         new_val="weapon")
-
-    # db_dict["weapon"] = get_db_data(spark, DB_URL, "weapon", PROPERTIES)
-
-    # df_dict["weapon"] = df_dict["weapon"].join(
-    #     db_dict["weapon"], df_dict["weapon"].weapon == db_dict["weapon"].weapon, "leftanti"
-    # )
 
     # area data
 
