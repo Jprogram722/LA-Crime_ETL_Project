@@ -1,0 +1,27 @@
+services:
+  lacrime_postdb:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    networks:
+      - LACrimeNetwork
+    environment:
+      POSTGRES_DB: "${DB}"
+      POSTGRES_USER: "${USER}"
+      POSTGRES_PASSWORD: "${PASSWORD}"
+    volumes:
+      - ./sql_scripts/LACrime_db.sql:/docker-entrypoint-initdb.d/LACrime_db.sql
+
+  lacrime_elt:
+    build: 
+      context: ./
+      dockerfile: ./DockerFile
+    command: [ "python", "-u", "app.py" ]
+    networks:
+      - LACrimeNetwork
+    depends_on:
+      - lacrime_postdb
+
+networks:
+  LACrimeNetwork:
+    driver: bridge

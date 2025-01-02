@@ -1,25 +1,30 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
+import logging
+import time
 
 def connect():
+
     load_dotenv()
-    conn = psycopg2.connect(
-            database = os.getenv("DB"),
-            user = os.getenv("USER"),
-            password = os.getenv("PASSWORD"),
-            host = os.getenv("HOST"),
-            port = os.getenv("POST")
-    )
 
-    if conn:
-        print("connected")
+    for _ in range(5):
+        try:
+            conn = psycopg2.connect(
+                    database = os.getenv("DB"),
+                    user = os.getenv("USER"),
+                    password = os.getenv("PASSWORD"),
+                    host = os.getenv("HOST"),
+                    port = os.getenv("POST")
+            )
+            logging.info("Connected to DB")
+            cursor = conn.cursor()
+            return conn, cursor
+        except:
+            logging.info("Could Not Connect To DB. Retrying")
+            time.sleep(5)
 
-    cursor = conn.cursor()
-    if cursor:
-        print("cursor created")
-
-    return conn, cursor
+    return None
 
 def create_tables() -> None:
     conn, cursor = connect()
@@ -62,15 +67,18 @@ def truncated_tables() -> None:
 def merge():
     conn, cursor = connect()
 
-    # excute the stored procedure
-    cursor.execute("CALL merge_data()")
-
-    try:
-        conn.commit()
-        print("Data has been merged")
-    except:
-        print("Something went wrong")
-        conn.rollback()
+    # read all the commands in the sql file and split into a list of commands
+    with open("./sql_scripts/merge_data.sql", "r") as sql:
+        content = sql.read()
+        commands = content.split(";")
+        for command in commands:
+            try:
+                cursor.execute(command)
+                conn.commit()
+                print("Data has been merged")
+            except:
+                print("Something went wrong")
+                conn.rollback()
 
     cursor.close()
     conn.close()

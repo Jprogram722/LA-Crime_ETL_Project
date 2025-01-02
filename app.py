@@ -6,7 +6,7 @@ from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
 import threading
-from python_postgres.postgresConnect import merge, drop_tmp_tables, create_tables
+from python_postgres.postgresConnect import merge, drop_tmp_tables
 from pyspark_db import insert_data
 
 def prepare_dataframe(df, **cols):
@@ -55,7 +55,7 @@ def main() -> None:
     ################## PART 1: download the data and truncate database ####################
 
     # create all the tables
-    create_tables()
+    # create_tables()
 
     if not os.path.isdir(folder):
         os.mkdir(folder)
@@ -72,6 +72,7 @@ def main() -> None:
 
     ################## PART 2: Cleanse the data with pyspark ####################
 
+    # setup a spark configuration
     conf = SparkConf()
     # specify the java postgres driver to spark
     conf.set("spark.driver.extraClassPath", "./drivers/postgresql-42.7.2.jar")
@@ -81,9 +82,11 @@ def main() -> None:
     print("Starting Spark")
     spark = SparkSession.builder.appName("Data Wrangling").config(conf=conf).getOrCreate()
 
+    # read the file
     df = spark.read.csv("./data/LACrimeData.csv", header=True, inferSchema=True)
 
     df = df.withColumn(
+        # insert a colon and convert to datetime
         "TIME OCC", 
         sf.to_timestamp(sf.concat(
             sf.substring("TIME OCC", 0, 2),
@@ -92,6 +95,7 @@ def main() -> None:
         ), "HH:mm"),
     ) \
     .withColumn(
+        # fill null values with the specified
         "TIME OCC",
         sf.col("TIME OCC").cast("string")
     ).na.fill(value="1970-01-01 00:00:00", subset="TIME OCC") \

@@ -1,0 +1,21 @@
+FROM python:3.11.6
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y sudo \
+    vim \
+    pip \
+    default-jdk && \
+    pip install -U pyspark \
+        psycopg2-binary \
+        python-dotenv
+
+ADD python_postgres /app/python_postgres
+ADD drivers /app/drivers
+ADD sql_scripts /app/sql_scripts
+
+COPY app.py pyspark_db.py .env /app/
+
+
+CMD ["python", "-u" ,"app.py"]
