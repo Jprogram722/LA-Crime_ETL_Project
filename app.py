@@ -65,7 +65,14 @@ def main() -> None:
 
     # download the data
     print("Downloading Data")
-    request.urlretrieve(WEB_URL, f"./{folder}/{file_name}")
+    for _ in range(5):
+        try:
+            request.urlretrieve(WEB_URL, f"./{folder}/{file_name}")
+            print("File Downloaded")
+            break
+        except:
+            print("Somthing Went Wrong. Retrying")
+            time.sleep(5)
 
     # delete everything in the database
     # truncated_tables()
