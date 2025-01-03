@@ -92,7 +92,7 @@ def drop_tmp_tables(tables: list[str]):
 
     try:
         conn.commit()
-        print("Tables has been deleted")
+        print("Tmp tables has been deleted")
     except:
         print("Something went wrong")
         conn.rollback()

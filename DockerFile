@@ -8,11 +8,11 @@ RUN apt-get update && \
     pip \
     default-jdk
 
-ADD python_postgres /app/python_postgres
+ADD helpers /app/helpers
 ADD drivers /app/drivers
 ADD sql_scripts /app/sql_scripts
 
-COPY app.py pyspark_db.py .env requirements.txt /app/
+COPY app.py .env requirements.txt /app/
 
 RUN pip install -r /app/requirements.txt
 

@@ -6,8 +6,8 @@ from pyspark.sql import functions as sf
 from pyspark.conf import SparkConf
 import time
 import threading
-from python_postgres.postgresConnect import merge, drop_tmp_tables
-from pyspark_db import insert_data
+from helpers.postgresConnect import merge, drop_tmp_tables
+from helpers.pyspark_db import insert_data
 
 def prepare_dataframe(df, **cols):
     """
